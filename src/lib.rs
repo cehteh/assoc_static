@@ -39,14 +39,20 @@ macro_rules! assoc_static {
     ($T:ty, $TARGET:ty, $INIT:expr) => {
         impl AssocStatic<$TARGET> for $T {
             fn get_static() -> &'static $TARGET {
-                use std::marker::PhantomData;
-                static STATIC_ASSOCIATED: ($TARGET, PhantomData<$TARGET>, PhantomData<$T>) =
-                    ($INIT, PhantomData, PhantomData);
+                static STATIC_ASSOCIATED: (
+                    $TARGET,
+                    std::marker::PhantomData<$crate::MakeSync<&$T>>,
+                ) = ($INIT, std::marker::PhantomData);
                 &STATIC_ASSOCIATED.0
             }
         }
     };
 }
+
+/// Only a helper, needs to be public because of the macro
+#[doc(hidden)]
+pub struct MakeSync<T>(T);
+unsafe impl<T> Sync for MakeSync<T> {}
 
 #[cfg(test)]
 mod tests {
