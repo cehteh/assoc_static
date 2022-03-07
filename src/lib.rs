@@ -37,13 +37,13 @@ pub trait AssocStatic<T> {
 #[macro_export]
 macro_rules! assoc_static {
     ($T:ty, $TARGET:ty, $INIT:expr) => {
-        impl AssocStatic<$TARGET> for $T {
+        impl $crate::AssocStatic<$TARGET> for $T {
             fn get_static() -> &'static $TARGET {
-                static STATIC_ASSOCIATED: (
+                static ASSOCIATED_STATIC: (
                     $TARGET,
                     std::marker::PhantomData<$crate::MakeSync<&$T>>,
                 ) = ($INIT, std::marker::PhantomData);
-                &STATIC_ASSOCIATED.0
+                &ASSOCIATED_STATIC.0
             }
         }
     };
