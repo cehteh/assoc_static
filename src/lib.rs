@@ -2,8 +2,9 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-/// Associate a static object of type T to a type implementing this trait.
-pub trait AssocStatic<T> {
+/// Associates a static object of type T and a marker TAG.
+/// Use the `assoc_static!()` macro for implemeting this trait on types.
+pub trait AssocStatic<T, TAG> {
     /// Returns a reference to the associated static object of the Self type
     fn get_static() -> &'static T;
 
@@ -17,6 +18,7 @@ pub trait AssocStatic<T> {
 /// This must be a macro because statics can not take template parameters from the outer scope.
 ///
 ///  * 'T' is the type you want have an static object associated to
+///  * 'TAG' A type marker to discriminate this implementation, defaults to ()
 ///  * 'TARGET' is the type of the static object
 ///  * 'INIT' is used to initialize the static object
 ///
@@ -25,7 +27,8 @@ pub trait AssocStatic<T> {
 ///
 /// // define a type and attach a object to it
 /// struct Example;
-/// assoc_static!(Example, &'static str, "&str associated to Example");
+/// struct MyExampleMarker;
+/// assoc_static!(Example, MyExampleMarker, &'static str, "&str associated to Example");
 ///
 /// // get it by type
 /// assert_eq!(*Example::get_static(), "&str associated to Example");
@@ -36,13 +39,26 @@ pub trait AssocStatic<T> {
 /// ```
 #[macro_export]
 macro_rules! assoc_static {
-    ($T:ty, $TARGET:ty, $INIT:expr) => {
-        impl $crate::AssocStatic<$TARGET> for $T {
+    ($T:ty, $TAG:ty, $TARGET:ty, $INIT:expr) => {
+        impl $crate::AssocStatic<$TARGET, $TAG> for $T {
             fn get_static() -> &'static $TARGET {
                 static ASSOCIATED_STATIC: (
                     $TARGET,
-                    std::marker::PhantomData<$crate::MakeSync<&$T>>,
-                ) = ($INIT, std::marker::PhantomData);
+                    std::marker::PhantomData<$crate::MakeSync<$T>>,
+                    std::marker::PhantomData<$crate::MakeSync<$TAG>>,
+                ) = ($INIT, std::marker::PhantomData, std::marker::PhantomData);
+                &ASSOCIATED_STATIC.0
+            }
+        }
+    };
+    ($T:ty, $TARGET:ty, $INIT:expr) => {
+        impl $crate::AssocStatic<$TARGET, ()> for $T {
+            fn get_static() -> &'static $TARGET {
+                static ASSOCIATED_STATIC: (
+                    $TARGET,
+                    std::marker::PhantomData<$crate::MakeSync<$T>>,
+                    std::marker::PhantomData<()>,
+                ) = ($INIT, std::marker::PhantomData, std::marker::PhantomData);
                 &ASSOCIATED_STATIC.0
             }
         }
@@ -73,10 +89,10 @@ mod tests {
     #[test]
     fn multiple_statics() {
         assert_eq!(
-            *<TestType2 as AssocStatic<&str>>::get_static(),
+            *<TestType2 as AssocStatic<&str, ()>>::get_static(),
             "This is the second test type"
         );
-        assert_eq!(*<TestType2 as AssocStatic<u32>>::get_static(), 42);
+        assert_eq!(*<TestType2 as AssocStatic<u32, ()>>::get_static(), 42);
     }
 
     #[test]
@@ -92,9 +108,9 @@ mod tests {
     fn from_instance_multiple() {
         let test = TestType2;
         assert_eq!(
-            *AssocStatic::<&str>::my_static(&test),
+            *AssocStatic::<&str, ()>::my_static(&test),
             "This is the second test type"
         );
-        assert_eq!(*AssocStatic::<u32>::my_static(&test), 42);
+        assert_eq!(*AssocStatic::<u32, ()>::my_static(&test), 42);
     }
 }
