@@ -22,13 +22,13 @@ pub trait AssocStatic<T, TAG> {
 ///  * 'TARGET' is the type of the static object
 ///  * 'INIT' is used to initialize the static object
 ///
+/// The simple case, associate something to some local type:
 /// ```
 /// use crate::assoc_static::*;
 ///
-/// // define a type and attach a object to it
+/// // define a type and attach a '&str' object to it
 /// struct Example;
-/// struct MyExampleMarker;
-/// assoc_static!(Example, MyExampleMarker, &'static str, "&str associated to Example");
+/// assoc_static!(Example, &'static str, "&str associated to Example");
 ///
 /// // get it by type
 /// assert_eq!(*Example::get_static(), "&str associated to Example");
@@ -36,6 +36,45 @@ pub trait AssocStatic<T, TAG> {
 /// // get it from an object
 /// let example = Example;
 /// assert_eq!(*AssocStatic::my_static(&example), "&str associated to Example");
+/// ```
+///
+/// The 'TAG' is required when one needs to disambiguate between different target values of
+/// the same type or when an association between foreign types not defined in the current
+/// crate shall be established. This can be any (non-generic) type your crate defines,
+/// preferably you just make a zero-size struct just for this purpose. It is only used as
+/// marker for disambiguation.
+///
+/// Disambiguate between different static objects:
+/// ```
+/// use crate::assoc_static::*;
+///
+/// struct Example;
+///
+/// // attach a '&str' object to Example
+/// struct Hello;
+/// assoc_static!(Example, Hello, &'static str, "Hello World!");
+///
+/// // again bit for another purpose
+/// struct ExplainType;
+/// assoc_static!(Example, ExplainType, &'static str, "This is 'struct Example'");
+///
+/// let example = Example;
+///
+/// // resolve the disambiguity with a turbofish
+/// assert_eq!(*AssocStatic::<&str, Hello>::my_static(&example), "Hello World!");
+/// assert_eq!(*AssocStatic::<&str, ExplainType>::my_static(&example), "This is 'struct Example'");
+/// ```
+///
+/// Make an association between foreign types:
+/// ```
+/// use crate::assoc_static::*;
+///
+/// // attach a '&str' object to i32
+/// struct I32ExampleStr;
+/// assoc_static!(i32, I32ExampleStr, &'static str, "&str associated to i32");
+///
+/// // get it
+/// assert_eq!(*AssocStatic::my_static(&100i32), "&str associated to i32");
 /// ```
 #[macro_export]
 macro_rules! assoc_static {
