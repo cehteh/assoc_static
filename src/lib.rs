@@ -4,7 +4,7 @@
 
 /// Associates a static object of type T and a marker TAG.
 /// Use the `assoc_static!()` macro for implemeting this trait on types.
-pub trait AssocStatic<T, TAG> {
+pub trait AssocStatic<T, TAG = ()> {
     /// Returns a reference to the associated static object of the Self type
     fn get_static() -> &'static T;
 
