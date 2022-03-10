@@ -9,7 +9,7 @@ pub trait AssocStatic<T, TAG> {
     fn get_static() -> &'static T;
 
     /// Returns a reference to the associated object from an instance.
-    fn my_static(_this: &Self) -> &'static T {
+    fn from(_this: &Self) -> &'static T {
         Self::get_static()
     }
 }
@@ -35,7 +35,7 @@ pub trait AssocStatic<T, TAG> {
 ///
 /// // get it from an object
 /// let example = Example;
-/// assert_eq!(*AssocStatic::my_static(&example), "&str associated to Example");
+/// assert_eq!(*AssocStatic::from(&example), "&str associated to Example");
 /// ```
 ///
 /// The 'TAG' is required when one needs to disambiguate between different target values of
@@ -61,8 +61,8 @@ pub trait AssocStatic<T, TAG> {
 /// let example = Example;
 ///
 /// // resolve the disambiguity with a turbofish
-/// assert_eq!(*AssocStatic::<&str, Hello>::my_static(&example), "Hello World!");
-/// assert_eq!(*AssocStatic::<&str, ExplainType>::my_static(&example), "This is 'struct Example'");
+/// assert_eq!(*AssocStatic::<&str, Hello>::from(&example), "Hello World!");
+/// assert_eq!(*AssocStatic::<&str, ExplainType>::from(&example), "This is 'struct Example'");
 /// ```
 ///
 /// Make an association between foreign types:
@@ -74,7 +74,7 @@ pub trait AssocStatic<T, TAG> {
 /// assoc_static!(i32, I32ExampleStr, &'static str, "&str associated to i32");
 ///
 /// // get it
-/// assert_eq!(*AssocStatic::my_static(&100i32), "&str associated to i32");
+/// assert_eq!(*AssocStatic::from(&100i32), "&str associated to i32");
 /// ```
 #[macro_export]
 macro_rules! assoc_static {
@@ -137,19 +137,16 @@ mod tests {
     #[test]
     fn from_instance() {
         let test = TestType1;
-        assert_eq!(
-            *AssocStatic::my_static(&test),
-            "This is the first test type"
-        );
+        assert_eq!(*AssocStatic::from(&test), "This is the first test type");
     }
 
     #[test]
     fn from_instance_multiple() {
         let test = TestType2;
         assert_eq!(
-            *AssocStatic::<&str, ()>::my_static(&test),
+            *AssocStatic::<&str, _>::from(&test),
             "This is the second test type"
         );
-        assert_eq!(*AssocStatic::<u32, ()>::my_static(&test), 42);
+        assert_eq!(*AssocStatic::<u32, _>::from(&test), 42);
     }
 }
