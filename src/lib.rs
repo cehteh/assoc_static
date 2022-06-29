@@ -17,8 +17,8 @@ pub trait AssocStatic<T, TAG = ()> {
 /// Helper macro doing the boilerplate implementation.
 /// This must be a macro because statics can not take template parameters from the outer scope.
 ///
-///  * 'T' is the type you want have an static object associated to
 ///  * 'TAG' A type marker to discriminate this implementation, defaults to ()
+///  * 'T' is the type you want have an static object associated to
 ///  * 'TARGET' is the type of the static object
 ///  * 'INIT' is used to initialize the static object
 ///
@@ -28,14 +28,14 @@ pub trait AssocStatic<T, TAG = ()> {
 ///
 /// // define a type and attach a '&str' object to it
 /// struct Example;
-/// assoc_static!(Example, &'static str, "&str associated to Example");
+/// assoc_static!(Example, &'static str = "&str associated to Example");
 ///
 /// // get it by type
-/// assert_eq!(*Example::get_static(), "&str associated to Example");
+/// assert_eq!(Example::get_static(), &"&str associated to Example");
 ///
 /// // get it from an object
 /// let example = Example;
-/// assert_eq!(*AssocStatic::from(&example), "&str associated to Example");
+/// assert_eq!(AssocStatic::from(&example), &"&str associated to Example");
 /// ```
 ///
 /// The 'TAG' is required when one needs to disambiguate between different target values of
@@ -52,33 +52,33 @@ pub trait AssocStatic<T, TAG = ()> {
 ///
 /// // attach a '&str' object to Example
 /// struct Hello;
-/// assoc_static!(Example, Hello, &'static str, "Hello World!");
+/// assoc_static!(Hello:Example, &'static str = "Hello World!");
 ///
-/// // again bit for another purpose
+/// // again but for another purpose
 /// struct ExplainType;
-/// assoc_static!(Example, ExplainType, &'static str, "This is 'struct Example'");
+/// assoc_static!(ExplainType:Example, &'static str = "This is 'struct Example'");
 ///
 /// let example = Example;
 ///
-/// // resolve the disambiguity with a turbofish
-/// assert_eq!(*AssocStatic::<&str, Hello>::from(&example), "Hello World!");
-/// assert_eq!(*AssocStatic::<&str, ExplainType>::from(&example), "This is 'struct Example'");
+/// // resolve the ambiguity with a turbofish
+/// assert_eq!(AssocStatic::<_, Hello>::from(&example), &"Hello World!");
+/// assert_eq!(AssocStatic::<_, ExplainType>::from(&example), &"This is 'struct Example'");
 /// ```
 ///
 /// Make an association between foreign types:
 /// ```
 /// use crate::assoc_static::*;
 ///
-/// // attach a '&str' object to i32
+/// // attach a '&str' to i32
 /// struct I32ExampleStr;
-/// assoc_static!(i32, I32ExampleStr, &'static str, "&str associated to i32");
+/// assoc_static!(I32ExampleStr:i32, &'static str = "&str associated to i32");
 ///
 /// // get it
-/// assert_eq!(*AssocStatic::from(&100i32), "&str associated to i32");
+/// assert_eq!(AssocStatic::from(&100i32), &"&str associated to i32");
 /// ```
 #[macro_export]
 macro_rules! assoc_static {
-    ($T:ty, $TAG:ty, $TARGET:ty, $INIT:expr) => {
+    ($TAG:ty:$T:ty, $TARGET:ty = $INIT:expr) => {
         impl $crate::AssocStatic<$TARGET, $TAG> for $T {
             fn get_static() -> &'static $TARGET {
                 static ASSOCIATED_STATIC: (
@@ -90,7 +90,7 @@ macro_rules! assoc_static {
             }
         }
     };
-    ($T:ty, $TARGET:ty, $INIT:expr) => {
+    ($T:ty, $TARGET:ty = $INIT:expr) => {
         impl $crate::AssocStatic<$TARGET, ()> for $T {
             fn get_static() -> &'static $TARGET {
                 static ASSOCIATED_STATIC: (
@@ -114,22 +114,22 @@ mod tests {
     use crate::AssocStatic;
 
     struct TestType1;
-    assoc_static!(TestType1, &'static str, "This is the first test type");
+    assoc_static!(TestType1, &'static str = "This is the first test type");
 
     #[test]
     fn smoke() {
-        assert_eq!(*TestType1::get_static(), "This is the first test type");
+        assert_eq!(TestType1::get_static(), &"This is the first test type");
     }
 
     struct TestType2;
-    assoc_static!(TestType2, &'static str, "This is the second test type");
-    assoc_static!(TestType2, u32, 42);
+    assoc_static!(TestType2, &'static str = "This is the second test type");
+    assoc_static!(TestType2, u32 = 42);
 
     #[test]
     fn multiple_statics() {
         assert_eq!(
-            *<TestType2 as AssocStatic<&str, ()>>::get_static(),
-            "This is the second test type"
+            <TestType2 as AssocStatic<&str, ()>>::get_static(),
+            &"This is the second test type"
         );
         assert_eq!(*<TestType2 as AssocStatic<u32, ()>>::get_static(), 42);
     }
@@ -137,15 +137,15 @@ mod tests {
     #[test]
     fn from_instance() {
         let test = TestType1;
-        assert_eq!(*AssocStatic::from(&test), "This is the first test type");
+        assert_eq!(AssocStatic::from(&test), &"This is the first test type");
     }
 
     #[test]
     fn from_instance_multiple() {
         let test = TestType2;
         assert_eq!(
-            *AssocStatic::<&str, _>::from(&test),
-            "This is the second test type"
+            AssocStatic::<&str, _>::from(&test),
+            &"This is the second test type"
         );
         assert_eq!(*AssocStatic::<u32, _>::from(&test), 42);
     }
